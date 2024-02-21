@@ -55,7 +55,7 @@ export const handler = async (event) => {
   }
 };
 
-export const getAllChains = async (queryParams) => {
+const getAllChains = async (queryParams) => {
   try {
     const page = Number(queryParams.page) || 1;
     const limit = Number(queryParams.limit) || 10;
@@ -81,7 +81,7 @@ export const getAllChains = async (queryParams) => {
   }
 }
 
-export const getChainById = async (chainId) => {
+const getChainById = async (chainId) => {
   try {
     if (!chainId) {
       return {
@@ -117,7 +117,7 @@ export const getChainById = async (chainId) => {
 }
 
 
-export const addChain = async (requestBody) => {
+const addChain = async (requestBody) => {
   try {
     const requestData = JSON.parse(requestBody);
     await chainSchema.validate(requestData, { abortEarly: false });
@@ -143,7 +143,7 @@ export const addChain = async (requestBody) => {
   }
 }
 
-export const updateChain = async (chainId, requestBody) => {
+const updateChain = async (chainId, requestBody) => {
   try {
     const requestData = JSON.parse(requestBody);
     await chainSchema.validate(requestData, { abortEarly: false });
@@ -192,7 +192,7 @@ export const updateChain = async (chainId, requestBody) => {
 }
 
 
-export const deleteChain = async (chainId) => {
+const deleteChain = async (chainId) => {
   try {
     if (!chainId) {
       return {
@@ -233,7 +233,7 @@ export const deleteChain = async (chainId) => {
 }
 
 
-export const pauseChain = async (chainId) => {
+const pauseChain = async (chainId) => {
   try {
     const chain = await Chain.findById(chainId).lean();
     console.log('chain["isPaused"]', chain["isPaused"]);
