@@ -78,7 +78,7 @@ export const authToken = async (event) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded["_id"]).select("-password");
     event.user = user;
-    return event;
+    return JSON.stringify(event);
   } catch (err) {
     throw new HTTPError("Token is expired or invalid", UNAUTHORIZED, err);
   }

@@ -236,11 +236,11 @@ const deleteChain = async (chainId) => {
 const pauseChain = async (chainId) => {
   try {
     const chain = await Chain.findById(chainId).lean();
-    console.log('chain["isPaused"]', chain["isPaused"]);
+    console.log('chain["isPaused"]', chain["isPause"])
 
     const updatedChain = await Chain.findOneAndUpdate(
       { _id: chainId },
-      { $set: { isPaused: !chain["isPaused"] } },
+      { $set: { isPause: !chain["isPause"] } },
       { new: true }
     );
     const successResponse = {
