@@ -18,6 +18,10 @@ const chainSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    image: {
+      type: String,
+      // required: true,
+    },
     parentPercentage: {
       type: Number,
       required: true,

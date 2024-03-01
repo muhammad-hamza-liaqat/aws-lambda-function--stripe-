@@ -1,35 +1,55 @@
 import StatusCodes from "http-status-codes";
 import Chain from "./chain.model.mjs";
-import { HTTPError, HTTPResponse, DBConn, chainSchema, catchError, authToken } from "./utils.mjs";
-
+import {
+  HTTPError,
+  HTTPResponse,
+  DBConn,
+  chainSchema,
+  catchError,
+  authToken,
+} from "./utils/helper.mjs";
+// import { upload } from "./utils/imageUploader.mjs";
+import { uploadFile } from "./utils/imageUploadS3.mjs";
 
 export const handler = async (event) => {
   try {
     await DBConn();
-    await authToken(event)
+    await authToken(event);
     const method = event.httpMethod;
     const path = event.path;
     const pathParams = event.pathParameters;
     const body = event.body;
     const queryParams = event.queryStringParameters || {};
+    const imageData = event.files && event.files.image; // Access image from the form data
 
+    // console.log("event:", event);
+    // console.log("IMAGEDATA----------------:", event.files);
+    // console.log("IMAGEDATA----------------:", event.files.image);
     switch (method) {
       case "GET":
         if (path === "/getAllChain") {
           return await getAllChains(queryParams);
-        } else if (path.startsWith("/getChainById/") && pathParams && pathParams.id) {
+        } else if (
+          path.startsWith("/getChainById/") &&
+          pathParams &&
+          pathParams.id
+        ) {
           return await getChainById(pathParams.id);
         }
         break;
       case "POST":
         if (path === "/addChain") {
-          return await addChain(body);
+          return await addChain(body, imageData);
         }
         break;
       case "PUT":
         if (path.startsWith("/updateChain/") && pathParams && pathParams.id) {
           return await updateChain(pathParams.id, body);
-        } else if (path.startsWith("/pauseChain/") && pathParams && pathParams.id) {
+        } else if (
+          path.startsWith("/pauseChain/") &&
+          pathParams &&
+          pathParams.id
+        ) {
           return await pauseChain(pathParams.id);
         }
         break;
@@ -79,7 +99,7 @@ const getAllChains = async (queryParams) => {
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),
     };
   }
-}
+};
 
 const getChainById = async (chainId) => {
   try {
@@ -114,22 +134,28 @@ const getChainById = async (chainId) => {
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),
     };
   }
-}
+};
 
-
-const addChain = async (requestBody) => {
+export const addChain = async (requestBody, image) => {
   try {
     const requestData = JSON.parse(requestBody);
     await chainSchema.validate(requestData, { abortEarly: false });
-
     const { name } = requestData;
     let chain = await Chain.findOne({ name });
     if (chain) {
-      let error = new HTTPError("A chain with the provided name already exists", StatusCodes.CONFLICT);
+      let error = new HTTPError(
+        "A chain with the provided name already exists",
+        StatusCodes.CONFLICT
+      );
       return {
         statusCode: StatusCodes.CONFLICT,
         body: JSON.stringify(error),
       };
+    }
+    if (image) {
+      const baseURL = `http://localhost:5000/uploads/chainImage/${image.name}`;
+      const imageUrl = await uploadFile(image.data, baseURL);
+      requestData.image = imageUrl;
     }
     chain = new Chain(requestData);
     await chain.save();
@@ -141,9 +167,9 @@ const addChain = async (requestBody) => {
   } catch (error) {
     return await catchError(error);
   }
-}
+};
 
-const updateChain = async (chainId, requestBody) => {
+const updateChain = async (chainId, requestBody, image) => {
   try {
     const requestData = JSON.parse(requestBody);
     await chainSchema.validate(requestData, { abortEarly: false });
@@ -163,14 +189,23 @@ const updateChain = async (chainId, requestBody) => {
           body: JSON.stringify(response),
         };
       }
+    };
+    if (image) {
+      const baseURL = `http://localhost:3000/uploads/chainImage/${image.name}`;
+      const imageUrl = await uploadFile(image.data, baseURL);
+      requestData.image = imageUrl;
     }
-    const updatedChain = await Chain.findOneAndUpdate({ _id: chainId }, requestData, {
-      new: true,
-    });
+    const updatedChain = await Chain.findOneAndUpdate(
+      { _id: chainId },
+      requestData,
+      {
+        new: true,
+      }
+    );
     if (updatedChain) {
       const successResponse = {
         message: "Chain updated successfully",
-        data: updatedChain
+        data: updatedChain,
       };
       return {
         statusCode: StatusCodes.OK,
@@ -189,8 +224,7 @@ const updateChain = async (chainId, requestBody) => {
   } catch (error) {
     return await catchError(error);
   }
-}
-
+};
 
 const deleteChain = async (chainId) => {
   try {
@@ -208,7 +242,7 @@ const deleteChain = async (chainId) => {
     if (deletedChain) {
       const successResponse = {
         message: "Chain successfully deleted",
-        data: deletedChain
+        data: deletedChain,
       };
       return {
         statusCode: StatusCodes.OK,
@@ -230,13 +264,12 @@ const deleteChain = async (chainId) => {
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),
     };
   }
-}
-
+};
 
 const pauseChain = async (chainId) => {
   try {
     const chain = await Chain.findById(chainId).lean();
-    console.log('chain["isPaused"]', chain["isPause"])
+    console.log('chain["isPaused"]', chain["isPause"]);
 
     const updatedChain = await Chain.findOneAndUpdate(
       { _id: chainId },
@@ -245,7 +278,7 @@ const pauseChain = async (chainId) => {
     );
     const successResponse = {
       message: "Chain pause status updated successfully",
-      data: updatedChain
+      data: updatedChain,
     };
     return {
       statusCode: StatusCodes.OK,
@@ -258,4 +291,4 @@ const pauseChain = async (chainId) => {
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),
     };
   }
-}
+};

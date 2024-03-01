@@ -22,10 +22,15 @@ Resources:
       Handler: chainController.handler
       CodeUri: src/
       Runtime: nodejs20.x
+      # Policies:
+      #   - S3WritePolicy: {}
       Environment:
         Variables:
           JWT_SECRET: "IAmASecret05dev@@crack"
           MONGODB_URI: "mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless"
+          AWS_ACCESS_KEY: !Ref AWS_ACCESS_KEY
+          AWS_SECRET_ACCESS_KEY: !Ref AWS_SECRET_ACCESS_KEY
+          AWS_BUCKET_NAME: !Ref AWS_BUCKET_NAME
       Events:
         Auth:
           Type: Api
@@ -78,6 +83,13 @@ Resources:
       ResourceGroupName:
         Ref: ApplicationResourceGroup
       AutoConfigurationEnabled: 'true'
+# Parameters:
+#   AWS_ACCESS_KEY:
+#     Type: String
+#   AWS_SECRET_ACCESS_KEY:
+#     Type: String
+#   AWS_BUCKET_NAME:
+#     Type: String
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM

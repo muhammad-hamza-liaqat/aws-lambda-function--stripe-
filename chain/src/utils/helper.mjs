@@ -1,4 +1,4 @@
-import User from "./user.model.mjs";
+import User from "../user.model.mjs";
 import * as yup from "yup";
 import mongoose from "mongoose";
 import StatusCodes from "http-status-codes";
@@ -50,7 +50,7 @@ export const chainSchema = yup.object().shape({
 export const catchError = async (error) => {
   if (error instanceof yup.ValidationError) {
     const validationErrors = {};
-    error.inner.forEach(err => {
+    error.inner.forEach((err) => {
       validationErrors[err.path] = err.message;
     });
     return {
@@ -64,13 +64,13 @@ export const catchError = async (error) => {
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),
     };
   }
-}
+};
 
 //Token Handler
 export const authToken = async (event) => {
   const headers = event.headers;
   const token = headers?.Authorization?.split(" ")[1];
-  console.log('TOKEN:', token)
+  console.log("TOKEN:", token);
   if (!token) {
     throw new HTTPError("Token is missing", UNAUTHORIZED);
   }
@@ -83,5 +83,3 @@ export const authToken = async (event) => {
     throw new HTTPError("Token is expired or invalid", UNAUTHORIZED, err);
   }
 };
-
-
