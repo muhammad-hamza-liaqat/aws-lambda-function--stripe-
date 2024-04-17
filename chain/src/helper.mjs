@@ -1,8 +1,6 @@
-import User from "../user.model.mjs";
 import yup from "yup";
 import mongoose from "mongoose";
 import StatusCodes from "http-status-codes";
-import jwt from "jsonwebtoken";
 
 export const DBConn = async () => {
   try {
@@ -44,7 +42,7 @@ export const chainSchema = yup.object().shape({
   parentPercentage: yup.number().required("Parent Percentage is required"),
 });
 
-export const editChainValidation = yup.object().shape({
+export const updateChainValidation = yup.object().shape({
   name: yup.string().required("Name is required"),
   icon: yup.string(),
   parentPercentage: yup.number().required("Parent Percentage is required"),
@@ -69,23 +67,4 @@ export const catchError = async (error) => {
   }
 };
 
-export const authToken = async (event) => {
-  const headers = event.headers;
-  const token = headers.Authorization.split(" ")[1];
-  console.log("TOKEN:", token);
-  if (!token) {
-    throw new HTTPError("Token is missing", StatusCodes.UNAUTHORIZED);
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded["_id"]).select("-password");
-    event.user = user;
-    return event;
-  } catch (err) {
-    throw new HTTPError(
-      "Token is expired or invalid",
-      StatusCodes.UNAUTHORIZED,
-      err
-    );
-  }
-};
+

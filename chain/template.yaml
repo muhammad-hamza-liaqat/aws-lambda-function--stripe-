@@ -26,19 +26,7 @@ Resources:
       #   - S3WritePolicy: {}
       Environment:
         Variables:
-          JWT_SECRET: "IAmASecret05dev@@crack"
           MONGODB_URI: "mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless"
-          AWS_ACCESS_KEY: !Ref AWS_ACCESS_KEY
-          AWS_SECRET_ACCESS_KEY: !Ref AWS_SECRET_ACCESS_KEY
-          AWS_BUCKET_NAME: !Ref AWS_BUCKET_NAME
-      Events:
-        Auth:
-          Type: Api
-          Properties:
-            Path: /
-            Method: any
-            Auth:
-              Authorizer: TokenAuthorizer
       Events:
         GetChainEvent:
           Type: Api

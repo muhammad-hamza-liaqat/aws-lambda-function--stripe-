@@ -6,13 +6,11 @@ import {
   DBConn,
   chainSchema,
   catchError,
-  authToken,
-  editChainValidation,
-} from "./utils/helper.mjs";
+  updateChainValidation,
+} from "./helper.mjs";
 
 export async function handler(event) {
   try {
-    // await authToken(event)
     await DBConn();
     const method = event.httpMethod;
     const path = event.path;
@@ -79,15 +77,16 @@ export const getAllChains = async (queryParams) => {
       .skip(skip)
       .limit(limit);
     const totalChainsCount = await Chain.countDocuments({ isDelete: false });
+
+    let response = new HTTPResponse("Success", {
+      chains,
+      count: totalChainsCount,
+      totalInvestment: totalInvestment,
+    });
+
     return {
       statusCode: StatusCodes.OK,
-      body: JSON.stringify({
-        message: "Chains fetched successfully",
-        data: chainData,
-        totalChainsCount: totalChainsCount,
-        currentPage: page,
-        totalPages: Math.ceil(totalChainsCount / limit),
-      }),
+      body: JSON.stringify(response),
     };
   } catch (error) {
     console.error("An error occurred:", error);
@@ -167,7 +166,7 @@ export const updateChain = async (chainId, requestBody) => {
     const requestData = JSON.parse(requestBody);
     const { name, icon, parentPercentage } = requestData;
 
-    await editChainValidation.validate(requestData, { abortEarly: false });
+    await updateChainValidation.validate(requestData, { abortEarly: false });
 
     if (name) {
       const existingChain = await Chain.findOne({
