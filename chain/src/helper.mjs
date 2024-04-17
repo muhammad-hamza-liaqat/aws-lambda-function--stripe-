@@ -2,7 +2,6 @@ import yup from "yup";
 import StatusCodes from "http-status-codes";
 import { MongoClient } from "mongodb";
 
-// mongodb client connection
 export const DBConn = async () => {
   try {
     const encryptedClient = new MongoClient(process.env.MONGODB_URL, {});
@@ -46,7 +45,6 @@ export const chainSchema = yup.object().shape({
 });
 
 export const updateChainValidation = yup.object().shape({
-  name: yup.string().required("Name is required"),
   icon: yup.string(),
   parentPercentage: yup.number().required("Parent Percentage is required"),
 });
@@ -65,11 +63,13 @@ export const catchError = async (error) => {
     console.error("An error occurred:", error.message);
     return {
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error.message }),
+      body: JSON.stringify({
+        message: "Something Went Wrong",
+        error: error.message,
+      }),
     };
   }
 };
-
 
 export const catchTryAsyncErrors = (action) => async (queryParams, DB) => {
   try {
@@ -130,7 +130,6 @@ export const createRootNodeHelper = async (DB, chain) => {
 
 export const generateQRCode = async (nodeId) => {
   try {
-
     const fileName = `${nodeId}.png`;
     const baseURL = "http://localhost:5000/uploads/qrCode/";
     const imageURL = baseURL + fileName;

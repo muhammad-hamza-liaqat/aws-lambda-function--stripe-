@@ -26,10 +26,15 @@ const chainSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    isDelete:{
+    isDelete: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
+    status: {
+      type: String,
+      enum: ["Enabled", "Disabled", "Blocked"],
+      default: "Enabled",
+    },
   },
   {
     timestamps: true,

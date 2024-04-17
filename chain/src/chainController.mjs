@@ -1,15 +1,10 @@
 import StatusCodes from "http-status-codes";
-// import Chain from "./chain.model.mjs";
 import {
   HTTPError,
   HTTPResponse,
   DBConn,
-  chainSchema,
-  catchError,
-  updateChainValidation,
   catchTryAsyncErrors,
   createRootNodeHelper,
-  generateQRCode,
 } from "./helper.mjs";
 import { ObjectId } from "mongodb";
 
@@ -24,8 +19,6 @@ export async function handler(event) {
     const pathParams = event.pathParameters;
     const body = event.body;
     const queryParams = event.queryStringParameters || {};
-
-    // console.log("object", body);
 
     switch (method) {
       case "GET":
@@ -46,11 +39,7 @@ export async function handler(event) {
         break;
       case "PUT":
         if (path.startsWith("/updateChain/") && pathParams && pathParams.id) {
-          return await updateChain(
-            DB,
-            pathParams.id,
-            body
-          );
+          return await updateChain(DB, pathParams.id, body);
         } else if (
           path.startsWith("/pauseChain/") &&
           pathParams &&
@@ -65,8 +54,13 @@ export async function handler(event) {
         }
         break;
       case "PATCH":
-        if (path.startsWith("/updateChainStatus/") && pathParams && pathParams.id && pathParams.status){
-          return await updateChainStatus(DB, pathParams.id, pathParams.status)
+        if (
+          path.startsWith("/updateChainStatus/") &&
+          pathParams &&
+          pathParams.id &&
+          pathParams.status
+        ) {
+          return await updateChainStatus(DB, pathParams.id, pathParams.status);
         }
       default:
         return {
@@ -86,197 +80,139 @@ export async function handler(event) {
 }
 
 export const getAllChains = async (DB, queryParams) => {
-  try {
-    const page = Number(queryParams.page) || 1;
-    const limit = Number(queryParams.limit) || 10;
-    const skip = (page - 1) * limit;
-    const chainData = await DB.collection("chains")
-      .aggregate([{ $skip: skip }, { $limit: limit }])
-      .toArray();
-    const totalChainsCount = await DB.collection("chains").countDocuments();
-    let totalInvestment = 0;
-    // console.log("data=>", chainData);
-    for (const chain of chainData) {
-      const collectionName = `treeNodes${chain.name}`;
-      const firstNode = await DB.collection(collectionName).findOne({
-        _id: new ObjectId(chain.rootNode),
-      });
-      const totalMembers = firstNode?.totalMembers || 0;
-      // console.log("first", firstNode);
-      const chainInvestment = totalMembers * chain.seedAmount;
-      chain.investment = chainInvestment;
-      totalInvestment += chainInvestment;
-    }
+  const page = Number(queryParams.page) || 1;
+  const limit = Number(queryParams.limit) || 10;
+  const skip = (page - 1) * limit;
 
-    let response = new HTTPResponse("Success", {
-      chainData,
-      count: totalChainsCount,
-      totalInvestment: totalInvestment,
+  const chainData = await DB.collection("chains")
+    .aggregate([{ $skip: skip }, { $limit: limit }])
+    .toArray();
+
+  const totalChainsCount = await DB.collection("chains").countDocuments();
+
+  let totalInvestment = 0;
+  for (const chain of chainData) {
+    const collectionName = `treeNodes${chain.name}`;
+    const rootNode = await DB.collection(collectionName).findOne({
+      _id: new ObjectId(chain.rootNode),
     });
-
-    return {
-      statusCode: StatusCodes.OK,
-      body: JSON.stringify(response),
-    };
-  } catch (error) {
-    console.error("An error occurred:", error);
-    return {
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
-    };
+    const totalMembers = rootNode?.totalMembers || 0;
+    const chainInvestment = totalMembers * chain.seedAmount;
+    chain.investment = chainInvestment;
+    totalInvestment += chainInvestment;
   }
+
+  let response = new HTTPResponse("Success", {
+    chainData,
+    count: totalChainsCount,
+    totalInvestment: totalInvestment,
+  });
+
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
 };
 
 export const getChainById = async (DB, id) => {
-  // console.log("{incoming _id}", id);
-  try {
-    if (!id) {
-      return {
-        statusCode: StatusCodes.BAD_REQUEST,
-        body: JSON.stringify({
-          error: "Invalid chain ID provided",
-        }),
-      };
-    }
-    const chain = await DB.collection("chains").findOne({
-      _id: new ObjectId(id),
-    });
-    if (!chain) {
-      error = new HTTPError("Chain not found!", StatusCodes.NOT_FOUND);
-      return res.status(StatusCodes.CONFLICT).json(error);
-    }
+  const chain = await DB.collection("chains").findOne({
+    _id: new ObjectId(id),
+  });
+  if (!chain) {
+    error = new HTTPError("Chain not found!", StatusCodes.NOT_FOUND);
     return {
-      statusCode: StatusCodes.OK,
-      body: JSON.stringify({
-        message: "SuccessFuly fetched Chain",
-        data: chain,
-      }),
-    };
-  } catch (error) {
-    console.error("An error occurred:", error);
-    return {
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
+      statusCode: StatusCodes.CONFLICT,
+      body: JSON.stringify(error),
     };
   }
+
+  let response = new HTTPResponse("SuccessFuly fetched Chain", chain);
+
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
 };
 
 export const addChain = async (DB, body) => {
-  try {
-    let error, response;
-    const chainData = await DB.collection("chains");
+  let error, response;
+  const chainCollection = await DB.collection("chains");
 
-    const { name, user } = JSON.parse(body);
+  const { name, user } = JSON.parse(body);
 
-    const existingChain = await chainData.findOne({ name: name });
-    if (existingChain) {
-      error = {
-        message: "Chain with that name already exists!",
-      };
-      return {
-        statusCode: StatusCodes.CONFLICT,
-        body: JSON.stringify(error),
-      };
-    }
-
-    const userId = new ObjectId(user);
-    const currentDate = new Date();
-    const createChainData = {
-      name: name,
-      user: userId,
-      isPause: false,
-      createdAt: currentDate,
-      updatedAt: currentDate,
-    };
-
-    const insertChain = await chainData.insertOne(createChainData);
-    let chain = await chainData.findOne({
-      _id: new ObjectId(insertChain.insertedId),
-    });
-
-    const rootNode = await createRootNodeHelper(DB, chain);
-    chain = await chainData.findOneAndUpdate(
-      { _id: chain._id },
-      { $set: { rootNode: rootNode?._id } },
-      { returnDocument: "after" }
+  const existingChain = await chainCollection.findOne({ name: name });
+  if (existingChain) {
+    error = new HTTPError(
+      "Chain with that name already exists!",
+      StatusCodes.CONFLICT
     );
-    response = new HTTPResponse("Chain created successfully", chain);
+
     return {
-      statusCode: StatusCodes.CREATED,
-      body: JSON.stringify(response),
-    };
-  } catch (error) {
-    console.error("An error occurred:", error);
-    return {
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
+      statusCode: StatusCodes.CONFLICT,
+      body: JSON.stringify(error),
     };
   }
+
+  const currentDate = new Date();
+  const createChainData = {
+    name: name,
+    user: new ObjectId(user),
+    status: "Enabled",
+    isPause: false,
+    isDelete: false,
+    createdAt: currentDate,
+    updatedAt: currentDate,
+  };
+
+  const insertChain = await chainCollection.insertOne(createChainData);
+  let chain = await chainCollection.findOne({
+    _id: new ObjectId(insertChain.insertedId),
+  });
+
+  const rootNode = await createRootNodeHelper(DB, chain);
+  chain = await chainCollection.findOneAndUpdate(
+    { _id: chain._id },
+    { $set: { rootNode: new ObjectId(rootNode?._id) } },
+    { returnDocument: "after" }
+  );
+  response = new HTTPResponse("Chain created successfully", chain);
+  return {
+    statusCode: StatusCodes.CREATED,
+    body: JSON.stringify(response),
+  };
 };
 
 export const updateChain = async (DB, id, body) => {
-  console.log("id", id);
-  console.log("body", body);
-  const { name, icon, parentPercentage } = JSON.parse(body);
-  if (!body) {
-    return {
-      statusCode: StatusCodes.BAD_REQUEST,
-      body: JSON.stringify({
-        error: "Request body is missing.",
-      }),
-    };
-  }
-
-  if (name) {
-    const existingChainWithSameName = await DB.collection("chains").findOne({
-      name: name,
-      _id: { $ne: id },
-    });
-    if (existingChainWithSameName) {
-      return {
-        statusCode: StatusCodes.CONFLICT,
-        body: JSON.stringify({
-          error: "Chain with that name already exists!",
-        }),
-      };
-    }
-  }
+  let response, error;
+  const { icon, parentPercentage } = JSON.parse(body);
 
   const updatedChain = await DB.collection("chains").findOneAndUpdate(
     { _id: new ObjectId(id) },
-    { $set: {  icon, parentPercentage } },
+    { $set: { icon, parentPercentage } },
     { returnDocument: "after" }
   );
 
   if (updatedChain) {
+    response = new HTTPResponse("Chain updated successfully!", updatedChain);
     return {
       statusCode: StatusCodes.OK,
-      body: JSON.stringify({
-        response: "Chain updated successfully!",
-        chain: updatedChain,
-      }),
+      body: JSON.stringify(response),
     };
   } else {
+    error = new HTTPError(
+      "Chain with that ID not found!",
+      StatusCodes.CONFLICT
+    );
+
     return {
       statusCode: StatusCodes.NOT_FOUND,
-      body: JSON.stringify({
-        error: "Chain with that ID not found!",
-      }),
+      body: JSON.stringify(error),
     };
   }
 };
 
 export const deleteChain = async (DB, id) => {
   let response, error;
-  console.log("{incoming _id}=>", id);
-  if (!id) {
-    return {
-      statusCode: StatusCodes.BAD_REQUEST,
-      body: JSON.stringify({
-        error: "chain _id not found",
-      }),
-    };
-  }
 
   const updatedChain = await DB.collection("chains").findOneAndUpdate(
     { _id: new ObjectId(id) },
@@ -284,47 +220,42 @@ export const deleteChain = async (DB, id) => {
     { new: true }
   );
 
-  if (!updatedChain) {
+  if (updatedChain) {
+    response = new HTTPResponse("Success", updatedChain);
+
     return {
-      statusCode: StatusCodes.NOT_FOUND,
-      body: JSON.stringify({
-        error: "Chain not found with the provided _id",
-      }),
+      statusCode: StatusCodes.OK,
+      body: JSON.stringify(response),
+    };
+  } else {
+    error = new HTTPError(
+      "Chain with that ID not found!",
+      StatusCodes.CONFLICT
+    );
+    return {
+      statusCode: StatusCodes.CONFLICT,
+      body: JSON.stringify(error),
     };
   }
-
-  response = new HTTPResponse("Success", updatedChain);
-  return {
-    statusCode: StatusCodes.OK,
-    body: JSON.stringify({
-      response: "chain deleted successfully!",
-    }),
-  };
 };
 
 export const pauseChain = async (DB, id) => {
   let response, error;
-  console.log("{incoming_pause_id}=>", id);
-  if (!id) {
-    return {
-      statusCode: StatusCodes.BAD_REQUEST,
-      body: JSON.stringify({
-        error: "Chain _id not found",
-      }),
-    };
-  }
+
   const chain = await DB.collection("chains").findOne({
     _id: new ObjectId(id),
   });
   if (!chain) {
+    error = new HTTPError(
+      "Chain with that ID not found!",
+      StatusCodes.NOT_FOUND
+    );
     return {
       statusCode: StatusCodes.NOT_FOUND,
-      body: JSON.stringify({
-        error: "Chain not found with the provided _id",
-      }),
+      body: JSON.stringify(error),
     };
   }
-  console.log('chain["isPause"]', chain["isPause"]);
+
   const updatedChain = await DB.collection("chains").findOneAndUpdate(
     { _id: new ObjectId(id) },
     { $set: { isPause: !chain["isPause"] } },
@@ -337,9 +268,7 @@ export const pauseChain = async (DB, id) => {
   };
 };
 
-export const updateChainStatus= async (DB, id, status) =>{
-  console.log("status:", status);
-  console.log("id", id);
+export const updateChainStatus = async (DB, id, status) => {
   const updatedChain = await DB.collection("chains").findOneAndUpdate(
     { _id: new ObjectId(id) },
     { $set: { status } },
@@ -352,7 +281,6 @@ export const updateChainStatus= async (DB, id, status) =>{
   let response = new HTTPResponse("Success", updatedChain);
   return {
     statusCode: StatusCodes.OK,
-    body: JSON.stringify(response)
+    body: JSON.stringify(response),
   };
-  
-}
+};
