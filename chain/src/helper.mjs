@@ -1,14 +1,17 @@
 import yup from "yup";
-import mongoose from "mongoose";
 import StatusCodes from "http-status-codes";
+import { MongoClient } from "mongodb";
 
+// mongodb client connection
 export const DBConn = async () => {
   try {
-    const uri = process.env.MONGODB_URI;
-    await mongoose.connect(uri);
-    console.log("DB connected");
-  } catch (error) {
-    console.error("An error occurred connecting DB:", error);
+    const encryptedClient = new MongoClient(process.env.MONGODB_URL, {});
+    await encryptedClient.connect();
+    console.log("db connected");
+    return encryptedClient;
+  } catch (err) {
+    console.error("Database connection error:", err);
+    throw err;
   }
 };
 
@@ -59,12 +62,83 @@ export const catchError = async (error) => {
       body: JSON.stringify({ errors: validationErrors }),
     };
   } else {
-    console.error("An error occurred:", error);
+    console.error("An error occurred:", error.message);
     return {
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
+      body: JSON.stringify({ message: "Something Went Wrong", error: error.message }),
     };
   }
 };
 
 
+export const catchTryAsyncErrors = (action) => async (queryParams, DB) => {
+  try {
+    const result = await action(queryParams, DB);
+    return result;
+  } catch (error) {
+    console.log("catchAsyncError", error?.message || error);
+    return catchError(error);
+  }
+};
+
+export const createRootNodeHelper = async (DB, chain) => {
+  try {
+    const collectionName = chain.name;
+    const currentDate = new Date();
+
+    const rootNodeData = {
+      value: 1,
+      user: chain.user,
+      chain: chain._id,
+      mode: "SYSTEM",
+      inviteAccepted: 0,
+      reward: 0,
+      parentReward: 0,
+      inDirectChild: false,
+      totalReferenceChild: 0,
+      totalDirectChild: 0,
+      totalMembers: 0,
+      totalEarning: 0,
+      level: 0,
+      status: "Enabled",
+      isDeleted: false,
+      children: [],
+      createdAt: currentDate,
+      updatedAt: currentDate,
+    };
+
+    const addNode = await DB.collection(`treeNodes${collectionName}`).insertOne(
+      rootNodeData
+    );
+
+    const qrCode = await generateQRCode(addNode.insertedId);
+
+    const rootNode = await DB.collection(
+      `treeNodes${collectionName}`
+    ).findOneAndUpdate(
+      { _id: addNode.insertedId },
+      { $set: { qrCode } },
+      { returnDocument: "after" }
+    );
+
+    return rootNode;
+  } catch (error) {
+    console.error("Error creating root node:", error);
+    throw error;
+  }
+};
+
+export const generateQRCode = async (nodeId) => {
+  try {
+
+    const fileName = `${nodeId}.png`;
+    const baseURL = "http://localhost:5000/uploads/qrCode/";
+    const imageURL = baseURL + fileName;
+    return imageURL;
+  } catch (error) {
+    console.error("Error occurred at QR code controller:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error });
+  }
+};
