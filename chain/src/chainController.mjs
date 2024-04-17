@@ -7,24 +7,19 @@ import {
   chainSchema,
   catchError,
   authToken,
+  editChainValidation,
 } from "./utils/helper.mjs";
-// import { upload } from "./utils/imageUploader.mjs";
-import { uploadFile } from "./utils/imageUploadS3.mjs";
 
-export const handler = async (event) => {
+export async function handler(event) {
   try {
+    // await authToken(event)
     await DBConn();
-    await authToken(event);
     const method = event.httpMethod;
     const path = event.path;
     const pathParams = event.pathParameters;
     const body = event.body;
     const queryParams = event.queryStringParameters || {};
-    const imageData = event.files && event.files.image; // Access image from the form data
 
-    // console.log("event:", event);
-    // console.log("IMAGEDATA----------------:", event.files);
-    // console.log("IMAGEDATA----------------:", event.files.image);
     switch (method) {
       case "GET":
         if (path === "/getAllChain") {
@@ -39,7 +34,7 @@ export const handler = async (event) => {
         break;
       case "POST":
         if (path === "/addChain") {
-          return await addChain(body, imageData);
+          return await addChain(body);
         }
         break;
       case "PUT":
@@ -75,13 +70,15 @@ export const handler = async (event) => {
   }
 };
 
-const getAllChains = async (queryParams) => {
+export const getAllChains = async (queryParams) => {
   try {
     const page = Number(queryParams.page) || 1;
     const limit = Number(queryParams.limit) || 10;
     const skip = (page - 1) * limit;
-    const chainData = await Chain.find({}).skip(skip).limit(limit);
-    const totalChainsCount = await Chain.countDocuments();
+    const chainData = await Chain.find({ isDelete: false })
+      .skip(skip)
+      .limit(limit);
+    const totalChainsCount = await Chain.countDocuments({ isDelete: false });
     return {
       statusCode: StatusCodes.OK,
       body: JSON.stringify({
@@ -101,7 +98,7 @@ const getAllChains = async (queryParams) => {
   }
 };
 
-const getChainById = async (chainId) => {
+export const getChainById = async (chainId) => {
   try {
     if (!chainId) {
       return {
@@ -136,10 +133,11 @@ const getChainById = async (chainId) => {
   }
 };
 
-export const addChain = async (requestBody, image) => {
+export const addChain = async (requestBody) => {
   try {
     const requestData = JSON.parse(requestBody);
     await chainSchema.validate(requestData, { abortEarly: false });
+
     const { name } = requestData;
     let chain = await Chain.findOne({ name });
     if (chain) {
@@ -151,11 +149,6 @@ export const addChain = async (requestBody, image) => {
         statusCode: StatusCodes.CONFLICT,
         body: JSON.stringify(error),
       };
-    }
-    if (image) {
-      const baseURL = `http://localhost:5000/uploads/chainImage/${image.name}`;
-      const imageUrl = await uploadFile(image.data, baseURL);
-      requestData.image = imageUrl;
     }
     chain = new Chain(requestData);
     await chain.save();
@@ -169,19 +162,21 @@ export const addChain = async (requestBody, image) => {
   }
 };
 
-const updateChain = async (chainId, requestBody, image) => {
+export const updateChain = async (chainId, requestBody) => {
   try {
     const requestData = JSON.parse(requestBody);
-    await chainSchema.validate(requestData, { abortEarly: false });
+    const { name, icon, parentPercentage } = requestData;
 
-    if (requestData.name) {
+    await editChainValidation.validate(requestData, { abortEarly: false });
+
+    if (name) {
       const existingChain = await Chain.findOne({
-        name: requestData.name,
+        name: name,
         _id: { $ne: chainId },
       });
       if (existingChain) {
         const response = new HTTPError(
-          "A chain with the provided name already exists",
+          "Chain with that name already exists!",
           StatusCodes.CONFLICT
         );
         return {
@@ -189,36 +184,31 @@ const updateChain = async (chainId, requestBody, image) => {
           body: JSON.stringify(response),
         };
       }
-    };
-    if (image) {
-      const baseURL = `http://localhost:3000/uploads/chainImage/${image.name}`;
-      const imageUrl = await uploadFile(image.data, baseURL);
-      requestData.image = imageUrl;
     }
+
     const updatedChain = await Chain.findOneAndUpdate(
       { _id: chainId },
-      requestData,
-      {
-        new: true,
-      }
+      { name, icon, parentPercentage },
+      { new: true }
     );
+
     if (updatedChain) {
-      const successResponse = {
-        message: "Chain updated successfully",
-        data: updatedChain,
-      };
+      const response = new HTTPResponse(
+        "Chain updated successfully!",
+        updatedChain
+      );
       return {
         statusCode: StatusCodes.OK,
-        body: JSON.stringify(successResponse),
+        body: JSON.stringify(response),
       };
     } else {
-      const response = new HTTPError(
-        "No chain found with the provided ID",
+      const error = new HTTPError(
+        "Chain with that ID not found!",
         StatusCodes.NOT_FOUND
       );
       return {
         statusCode: StatusCodes.NOT_FOUND,
-        body: JSON.stringify(response),
+        body: JSON.stringify(error),
       };
     }
   } catch (error) {
@@ -226,37 +216,50 @@ const updateChain = async (chainId, requestBody, image) => {
   }
 };
 
-const deleteChain = async (chainId) => {
+export const deleteChain = async (chainId) => {
   try {
-    if (!chainId) {
-      return {
-        statusCode: StatusCodes.BAD_REQUEST,
-        body: JSON.stringify({
-          error: "Invalid chain ID provided",
-        }),
-      };
-    }
-    const deletedChain = await Chain.findOneAndDelete({
-      _id: chainId,
-    });
-    if (deletedChain) {
-      const successResponse = {
-        message: "Chain successfully deleted",
-        data: deletedChain,
-      };
-      return {
-        statusCode: StatusCodes.OK,
-        body: JSON.stringify(successResponse),
-      };
-    } else {
+    const existingChain = await Chain.findOne({ _id: chainId });
+
+    if (!existingChain) {
       const errorResponse = {
-        error: "Chain with the provided ID not found",
+        error: "Chain with that ID not found",
       };
       return {
         statusCode: StatusCodes.NOT_FOUND,
         body: JSON.stringify(errorResponse),
       };
     }
+
+    if (existingChain.isDelete === true) {
+      const alreadyDeletedResponse = {
+        message: "Chain has been deleted already!",
+        data: {
+          _id: existingChain._id,
+          name: existingChain.name,
+          isDelete: existingChain.isDelete,
+        },
+      };
+      return {
+        statusCode: StatusCodes.BAD_REQUEST,
+        body: JSON.stringify(alreadyDeletedResponse),
+      };
+    }
+
+    // Update the chain to mark it as deleted
+    const updatedChain = await Chain.findOneAndUpdate(
+      { _id: chainId },
+      { $set: { isDelete: true } },
+      { new: true }
+    );
+
+    const successResponse = {
+      message: "Success",
+      data: updatedChain,
+    };
+    return {
+      statusCode: StatusCodes.OK,
+      body: JSON.stringify(successResponse),
+    };
   } catch (error) {
     console.error("An error occurred:", error);
     return {
@@ -266,26 +269,40 @@ const deleteChain = async (chainId) => {
   }
 };
 
-const pauseChain = async (chainId) => {
+export const pauseChain = async (chainId) => {
   try {
     const chain = await Chain.findById(chainId).lean();
-    console.log('chain["isPaused"]', chain["isPause"]);
 
-    const updatedChain = await Chain.findOneAndUpdate(
-      { _id: chainId },
-      { $set: { isPause: !chain["isPause"] } },
-      { new: true }
-    );
-    const successResponse = {
-      message: "Chain pause status updated successfully",
-      data: updatedChain,
-    };
-    return {
-      statusCode: StatusCodes.OK,
-      body: JSON.stringify(successResponse),
-    };
+    if (chain) {
+      console.log('chain["isPause"]', chain["isPause"]);
+      const updatedChain = await Chain.findOneAndUpdate(
+        { _id: chainId },
+        { $set: { isPause: !chain["isPause"] } },
+        { new: true }
+      );
+
+      const successResponse = {
+        message: "Success",
+        data: updatedChain,
+      };
+
+      return {
+        statusCode: StatusCodes.OK,
+        body: JSON.stringify(successResponse),
+      };
+    } else {
+      const errorResponse = {
+        error: "Chain with that ID not found",
+      };
+
+      return {
+        statusCode: StatusCodes.CONFLICT,
+        body: JSON.stringify(errorResponse),
+      };
+    }
   } catch (error) {
     console.error("An error occurred:", error);
+
     return {
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       body: JSON.stringify({ message: "Something Went Wrong", error: error }),

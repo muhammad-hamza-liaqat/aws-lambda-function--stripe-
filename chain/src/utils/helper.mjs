@@ -1,10 +1,9 @@
 import User from "../user.model.mjs";
-import * as yup from "yup";
+import yup from "yup";
 import mongoose from "mongoose";
 import StatusCodes from "http-status-codes";
 import jwt from "jsonwebtoken";
 
-//DB Connection
 export const DBConn = async () => {
   try {
     const uri = process.env.MONGODB_URI;
@@ -15,7 +14,6 @@ export const DBConn = async () => {
   }
 };
 
-//Error Handling
 export class HTTPError extends Error {
   code;
   details;
@@ -27,6 +25,7 @@ export class HTTPError extends Error {
     this.details = details;
   }
 }
+
 export class HTTPResponse {
   message;
   data;
@@ -37,7 +36,6 @@ export class HTTPResponse {
   }
 }
 
-//Validation Schema
 export const chainSchema = yup.object().shape({
   name: yup.string().required("Name is required"),
   icon: yup.string(),
@@ -46,7 +44,12 @@ export const chainSchema = yup.object().shape({
   parentPercentage: yup.number().required("Parent Percentage is required"),
 });
 
-//Catch Error Function
+export const editChainValidation = yup.object().shape({
+  name: yup.string().required("Name is required"),
+  icon: yup.string(),
+  parentPercentage: yup.number().required("Parent Percentage is required"),
+});
+
 export const catchError = async (error) => {
   if (error instanceof yup.ValidationError) {
     const validationErrors = {};
@@ -66,20 +69,23 @@ export const catchError = async (error) => {
   }
 };
 
-//Token Handler
 export const authToken = async (event) => {
   const headers = event.headers;
-  const token = headers?.Authorization?.split(" ")[1];
+  const token = headers.Authorization.split(" ")[1];
   console.log("TOKEN:", token);
   if (!token) {
-    throw new HTTPError("Token is missing", UNAUTHORIZED);
+    throw new HTTPError("Token is missing", StatusCodes.UNAUTHORIZED);
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded["_id"]).select("-password");
     event.user = user;
-    return JSON.stringify(event);
+    return event;
   } catch (err) {
-    throw new HTTPError("Token is expired or invalid", UNAUTHORIZED, err);
+    throw new HTTPError(
+      "Token is expired or invalid",
+      StatusCodes.UNAUTHORIZED,
+      err
+    );
   }
 };

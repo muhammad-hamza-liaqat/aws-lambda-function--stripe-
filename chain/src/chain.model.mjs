@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const chainSchema = new mongoose.Schema(
   {
@@ -18,10 +18,6 @@ const chainSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    image: {
-      type: String,
-      // required: true,
-    },
     parentPercentage: {
       type: Number,
       required: true,
@@ -30,11 +26,16 @@ const chainSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isDelete:{
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true,
   }
 );
 
-const Chain = mongoose.model('Chain', chainSchema);
+const Chain = mongoose.model("Chain", chainSchema);
+
 export default Chain;
