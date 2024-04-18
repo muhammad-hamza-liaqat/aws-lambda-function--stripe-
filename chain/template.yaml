@@ -17,7 +17,7 @@ Resources:
   ChainServerlessFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: chainController.handler
+      Handler: userNodeController.handler
       CodeUri: src/
       Runtime: nodejs20.x
       Environment:
@@ -25,41 +25,11 @@ Resources:
           MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless
           DB_NAME: 10DServerless
       Events:
-        GetChainEvent:
+        GetUserNodeEvent:
           Type: Api
           Properties:
-            Path: /getAllChain
+            Path: /getUserNodesAcrossChains/{id}
             Method: get
-        AddChainEvent:
-          Type: Api
-          Properties:
-            Path: /addChain
-            Method: post
-        GetChainByIdEvent:
-          Type: Api
-          Properties:
-            Path: /getChainById/{id}
-            Method: get
-        UpdateChainEvent:
-          Type: Api
-          Properties:
-            Path: /updateChain/{id}
-            Method: put
-        DeleteChainEvent:
-          Type: Api
-          Properties:
-            Path: /deleteChain/{id}
-            Method: delete
-        PauseChainEvent:
-          Type: Api
-          Properties:
-            Path: /pauseChain/{id}
-            Method: put
-        UpdateChainStatus:
-          Type: Api
-          Properties:
-            Path: /updateChainStatus/{id}/{status}
-            Method: Patch
     Metadata:
       SamResourceId: ChainServerlessFunction
   ApplicationResourceGroup:
