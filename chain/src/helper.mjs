@@ -36,35 +36,40 @@ export class HTTPResponse {
   }
 }
 
-
 export const catchError = async (error) => {
+  console.error("An error occurred:", error);
+  let statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
+  let errorMessage = "Something Went Wrong";
+
   if (error instanceof yup.ValidationError) {
-    const validationErrors = {};
+    const validationErrors = [];
     error.inner.forEach((err) => {
-      validationErrors[err.path] = err.message;
+      validationErrors.push(err.message);
     });
     return {
       statusCode: StatusCodes.BAD_REQUEST,
       body: JSON.stringify({ errors: validationErrors }),
     };
-  } else {
-    console.error("An error occurred:", error.message);
-    return {
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({
-        message: "Something Went Wrong",
-        error: error.message,
-      }),
-    };
+  } else if (error instanceof HTTPError) {
+    statusCode = error.code || StatusCodes.INTERNAL_SERVER_ERROR;
+    errorMessage = error.message;
   }
+
+  let err = new HTTPError({ message: errorMessage, error: error.message });
+  return {
+    statusCode,
+    body: JSON.stringify(err),
+  };
 };
 
-export const catchTryAsyncErrors = (action) => async (queryParams, DB) => {
-  try {
-    const result = await action(queryParams, DB);
-    return result;
-  } catch (error) {
-    console.log("catchAsyncError", error?.message || error);
-    return catchError(error);
-  }
-};
+export const catchTryAsyncErrors =
+  (action) =>
+  async (DB, ...queryParams) => {
+    try {
+      const result = await action(DB, ...queryParams);
+      return result;
+    } catch (error) {
+      console.log("catchAsyncError", error?.message || error);
+      return catchError(error);
+    }
+  };

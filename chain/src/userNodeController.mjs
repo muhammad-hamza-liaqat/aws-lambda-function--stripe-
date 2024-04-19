@@ -4,6 +4,7 @@ import {
   HTTPResponse,
   DBConn,
   catchTryAsyncErrors,
+  catchError,
 } from "./helper.mjs";
 import { ObjectId } from "mongodb";
 
@@ -16,16 +17,12 @@ export async function handler(event) {
     const method = event.httpMethod;
     const path = event.path;
     const pathParams = event.pathParameters;
-    const body = event.body;
-    const queryParams = event.queryStringParameters || {};
+    // const body = event.body;
+    // const queryParams = event.queryStringParameters || {};
 
     switch (method) {
       case "GET":
-        if (
-          path.startsWith("/getUserNodesAcrossChains/") &&
-          pathParams &&
-          pathParams.id
-        ) {
+        if (path.startsWith("/api/user/getUserNodes/") && pathParams.id) {
           return await catchTryAsyncErrors(getUserNodesAcrossChains)(
             DB,
             pathParams.id
@@ -42,32 +39,26 @@ export async function handler(event) {
         };
     }
   } catch (error) {
-    console.error("An error occurred:", error);
-    return {
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      body: JSON.stringify({ message: "Something Went Wrong", error: error }),
-    };
+    return catchError(error);
   }
 }
 
-
-const findNodeById = async (DB,nodeId, collectionName) => {
-  const nodeData = await DB
-    .collection(collectionName)
+const findNodeById = async (DB, nodeId, collectionName) => {
+  const nodeData = await DB.collection(collectionName)
     .find({ _id: new ObjectId(nodeId) }, { projection: { children: 1 } })
     .toArray();
   return nodeData[0];
 };
 
-const calculateLevels = async (DB,nodeId, collectionName) => {
-  const node = await findNodeById(DB,nodeId, collectionName);
+const calculateLevels = async (DB, nodeId, collectionName) => {
+  const node = await findNodeById(DB, nodeId, collectionName);
   if (!node) return { levelGrow: 0 };
 
   async function traverse(node, level) {
     if (node.children.length === 0) return level;
 
     const childPromises = node.children.map(async (childId) => {
-      const childNode = await findNodeById(DB,childId, collectionName);
+      const childNode = await findNodeById(DB, childId, collectionName);
       if (childNode) {
         return traverse(childNode, level + 1);
       }
@@ -83,13 +74,12 @@ const calculateLevels = async (DB,nodeId, collectionName) => {
 };
 
 export const getUserNodesAcrossChains = async (DB, id) => {
-  let error, response;
-  console.log("{incoming_id}", id);
+  // console.log("{incoming_id}", id);
   const chains = await DB.collection("chains")
     .find({}, { projection: { name: 1, childNodes: 1 } })
     .sort({ createdAt: -1 })
     .toArray();
-  console.log("chains", chains)
+  console.log("chains", chains);
   let fullyPopulated = 0;
   let underPopulated = 0;
   let totalNodesFetched = 0;
@@ -107,22 +97,21 @@ export const getUserNodesAcrossChains = async (DB, id) => {
     });
 
     const underPopulatedCount = await DB.collection(collectionName)
-    .aggregate([
-      {
-        $match: {
-          user: new ObjectId(id),
-          children: { $exists: true },
-          $expr: {
-            $lt: [{ $size: "$children" }, chain.childNodes],
+      .aggregate([
+        {
+          $match: {
+            user: new ObjectId(id),
+            children: { $exists: true },
+            $expr: {
+              $lt: [{ $size: "$children" }, chain.childNodes],
+            },
           },
         },
-      },
-      {
-        $count: "count",
-      },
-    ])
-    .toArray();
-  
+        {
+          $count: "count",
+        },
+      ])
+      .toArray();
 
     fullyPopulated += fullyPopulatedCount || 0;
     underPopulated += underPopulatedCount[0]?.count || 0;
@@ -165,14 +154,14 @@ export const getUserNodesAcrossChains = async (DB, id) => {
   }
   const nodeWithLevel = await Promise.all(
     userNodes.map(async (obj) => {
-      const levelGrow = await calculateLevels(DB,obj._id, obj.collectionName);
+      const levelGrow = await calculateLevels(DB, obj._id, obj.collectionName);
       obj.level = levelGrow;
       obj.levelComplete = 0;
       delete obj.collectionName;
       return obj;
     })
   );
-  response = new HTTPResponse(
+  let response = new HTTPResponse(
     "Nodes associated with the user fetched successfully!",
     {
       nodes: nodeWithLevel,
@@ -185,5 +174,3 @@ export const getUserNodesAcrossChains = async (DB, id) => {
     body: JSON.stringify(response),
   };
 };
-
-

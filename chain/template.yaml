@@ -14,7 +14,7 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
-  ChainServerlessFunction:
+  UserNodeFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: userNodeController.handler
@@ -28,10 +28,10 @@ Resources:
         GetUserNodeEvent:
           Type: Api
           Properties:
-            Path: /getUserNodesAcrossChains/{id}
+            Path: /api/user/getUserNodes/{id}
             Method: get
     Metadata:
-      SamResourceId: ChainServerlessFunction
+      SamResourceId: UserNodeFunction
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:
