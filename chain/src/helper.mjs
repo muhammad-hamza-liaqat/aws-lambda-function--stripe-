@@ -15,9 +15,6 @@ export const DBConn = async () => {
 };
 
 export class HTTPError extends Error {
-  code;
-  details;
-
   constructor(message = "Error", errorCode, details = []) {
     super();
     this.message = message;
@@ -25,11 +22,7 @@ export class HTTPError extends Error {
     this.details = details;
   }
 }
-
 export class HTTPResponse {
-  message;
-  data;
-
   constructor(message = "Success", data) {
     this.message = message;
     this.data = data;
@@ -38,8 +31,6 @@ export class HTTPResponse {
 
 export const catchError = async (error) => {
   console.error("An error occurred:", error);
-  let statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
-  let errorMessage = "Something Went Wrong";
 
   if (error instanceof yup.ValidationError) {
     const validationErrors = [];
@@ -48,16 +39,14 @@ export const catchError = async (error) => {
     });
     return {
       statusCode: StatusCodes.BAD_REQUEST,
-      body: JSON.stringify({ errors: validationErrors }),
+      body: JSON.stringify({ error: validationErrors }),
     };
-  } else if (error instanceof HTTPError) {
-    statusCode = error.code || StatusCodes.INTERNAL_SERVER_ERROR;
-    errorMessage = error.message;
-  }
+  } 
+  
 
-  let err = new HTTPError({ message: errorMessage, error: error.message });
+  let err = new HTTPError(  "Something Went Wrong",  StatusCodes.INTERNAL_SERVER_ERROR , error?.message || error);
   return {
-    statusCode,
+    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
     body: JSON.stringify(err),
   };
 };
