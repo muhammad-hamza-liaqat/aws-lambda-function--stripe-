@@ -30,6 +30,11 @@ Resources:
           Properties:
             Path: /api/user/getUserNodes/{id}
             Method: get
+        getFilterNodesEvent:
+          Type: Api
+          Properties:
+            Path: /api/user/filterNodes/{id}
+            Method: post
     Metadata:
       SamResourceId: UserNodeFunction
   ApplicationResourceGroup:

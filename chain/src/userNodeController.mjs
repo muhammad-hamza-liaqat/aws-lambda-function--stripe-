@@ -17,8 +17,8 @@ export async function handler(event) {
     const method = event.httpMethod;
     const path = event.path;
     const pathParams = event.pathParameters;
-    // const body = event.body;
-    // const queryParams = event.queryStringParameters || {};
+    const body = JSON.parse(event.body || "{}");
+    const queryParams = event.queryStringParameters || {};
 
     switch (method) {
       case "GET":
@@ -29,6 +29,14 @@ export async function handler(event) {
           );
         }
         break;
+      case "POST":
+        if (path.startsWith("/api/user/filterNodes/") && pathParams.id) {
+          return await catchTryAsyncErrors(filterNodes)(
+            DB,
+            body,
+            pathParams.id
+          );
+        }
 
       default:
         return {
@@ -42,6 +50,87 @@ export async function handler(event) {
     return catchError(error);
   }
 }
+export const filterNodes = async (DB, body, id) => {
+  const { populate, sort } = body;
+  console.log("{incoming _id}", id);
+
+  const chains = [
+    {
+      name: "10D",
+      childNodes: 2,
+    },
+    {
+      name: "30D",
+      childNodes: 2,
+    },
+    {
+      name: "20D",
+      childNodes: 2,
+    },
+    {
+      name: "3D",
+      childNodes: 2,
+    },
+  ];
+  let pipelineStages = [];
+
+  chains.flatMap((chain) => {
+    const collectionName = `treeNodes${chain.name}`;
+    console.log("collectionName", collectionName);
+    const pipeline = [
+      {
+        $unionWith: { coll: collectionName },
+      },
+      {
+        $match: {
+          user: new ObjectId(id),
+        },
+      },
+      // { $sort: { totalMembers: sort === "totalmembers" ? 1 : -1 } },
+      {
+        $graphLookup: {
+          from: collectionName,
+          startWith: "$children",
+          connectFromField: "children",
+          connectToField: "_id",
+          as: "allChildren",
+        },
+      },
+      {
+        $addFields: {
+          allChildrenCount: { $size: "$allChildren" },
+        },
+      },
+      {
+        $project: {
+          chain: 1,
+          totalMembers: { $size: "$allChildren" },
+          // children: 1,
+        },
+      },
+    ];
+
+    pipelineStages = pipelineStages.concat(pipeline);
+  });
+
+  pipelineStages.push({
+    $sort: {
+      totalMembers: sort === "totalmembers" ? -1 : 1,
+    },
+  });
+
+  const nodes = await DB.collection(`treeNodes${chains[0].name}`)
+    .aggregate(pipelineStages)
+    .toArray();
+  const response = new HTTPResponse(
+    `Filtered nodes for user ${id} fetched successfully!`,
+    nodes
+  );
+  return {
+    statusCode: StatusCodes.OK,
+    body: JSON.stringify(response),
+  };
+};
 
 const findNodeById = async (DB, nodeId, collectionName) => {
   const nodeData = await DB.collection(collectionName)
