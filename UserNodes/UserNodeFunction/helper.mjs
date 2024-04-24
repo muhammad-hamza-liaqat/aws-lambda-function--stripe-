@@ -53,9 +53,9 @@ export const catchError = async (error) => {
 
 export const catchTryAsyncErrors =
   (action) =>
-  async (DB, ...queryParams) => {
+  async (...queryParams) => {
     try {
-      const result = await action(DB, ...queryParams);
+      const result = await action(...queryParams);
       return result;
     } catch (error) {
       console.log("catchAsyncError", error?.message || error);

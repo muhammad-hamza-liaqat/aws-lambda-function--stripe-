@@ -17,8 +17,8 @@ Resources:
   UserNodeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: userNodeController.handler
-      CodeUri: src/
+      CodeUri: UserNodeFunction
+      Handler: app.getUserNodesAcrossChains
       Runtime: nodejs20.x
       Environment:
         Variables:
@@ -28,13 +28,8 @@ Resources:
         GetUserNodeEvent:
           Type: Api
           Properties:
-            Path: /api/user/getUserNodes/{id}
+            Path: /api/user/nodes/getlist/{userId}
             Method: get
-        getFilterNodesEvent:
-          Type: Api
-          Properties:
-            Path: /api/user/filterNodes/{id}
-            Method: post
     Metadata:
       SamResourceId: UserNodeFunction
   ApplicationResourceGroup:
