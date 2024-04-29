@@ -10,10 +10,10 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
-  UserNodeFunction:
+  UserNode:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: UserNodeFunction
+      CodeUri: UserNode
       Handler: app.getUserNodesAcrossChains
       Runtime: nodejs20.x
       Environment:
@@ -27,7 +27,7 @@ Resources:
             Path: /api/user/nodes/getlist/{userId}
             Method: get
     Metadata:
-      SamResourceId: UserNodeFunction
+      SamResourceId: UserNode
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:

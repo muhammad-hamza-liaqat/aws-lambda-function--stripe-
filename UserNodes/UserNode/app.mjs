@@ -2,7 +2,6 @@ import StatusCodes from "http-status-codes";
 import { HTTPResponse, DBConn, catchTryAsyncErrors } from "./helper.mjs";
 import { ObjectId } from "mongodb";
 
-
 const findNodeById = async (DB, nodeId, collectionName) => {
   const nodeData = await DB.collection(collectionName)
     .find({ _id: new ObjectId(nodeId) }, { projection: { children: 1 } })
@@ -33,10 +32,8 @@ const calculateLevels = async (DB, nodeId, collectionName) => {
   return levelGrow;
 };
 
-
 export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
-  let client = await DBConn();
-  const DB = client.db(process.env.DB_NAME);
+  const DB = await DBConn();
   const userId = event.pathParameters.userId;
 
   const page = Number(event.queryStringParameters?.page) || 1;
