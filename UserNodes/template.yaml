@@ -10,7 +10,7 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
-  UserNode:
+  UserNodeFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: UserNode
@@ -27,7 +27,26 @@ Resources:
             Path: /api/user/nodes/getlist/{userId}
             Method: get
     Metadata:
-      SamResourceId: UserNode
+      SamResourceId: UserNodeFunction
+
+  UserTop10NodeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: UserTop10Node
+      Handler: app.top10UserNodes
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless
+          DB_NAME: 10DServerless
+      Events:
+        GetUserNodeEvent:
+          Type: Api
+          Properties:
+            Path: /api/user/nodes/top10UserNodes/{userId}
+            Method: get
+    Metadata:
+      SamResourceId: UserTop10NodeFunction
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:

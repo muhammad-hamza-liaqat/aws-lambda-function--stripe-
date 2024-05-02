@@ -15,6 +15,19 @@ export const DBConn = async () => {
   }
 };
 
+export const generateCorsHeaders = (allowedMethods) => {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://main.d3gzu5jixwdx96.amplifyapp.com",
+  ];
+
+  return {
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": allowedMethods,
+    "Access-Control-Allow-Origin": allowedOrigins.join(", "),
+  };
+};
+
 export class HTTPError extends Error {
   constructor(message = "Error", errorCode, details = []) {
     super();
@@ -31,6 +44,7 @@ export class HTTPResponse {
 }
 
 export const catchTryAsyncErrors = (action) => async (event) => {
+  const headers = generateCorsHeaders("GET");
   try {
     const result = await action(event);
     return result;
@@ -43,6 +57,7 @@ export const catchTryAsyncErrors = (action) => async (event) => {
       });
       return {
         statusCode: StatusCodes.BAD_REQUEST,
+        headers,
         body: JSON.stringify({ error: validationErrors }),
       };
     }
@@ -54,6 +69,7 @@ export const catchTryAsyncErrors = (action) => async (event) => {
     );
     return {
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+      headers,
       body: JSON.stringify(err),
     };
   }
