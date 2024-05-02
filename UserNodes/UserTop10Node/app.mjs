@@ -62,7 +62,7 @@ const calculateLevels = async (DB, nodeId, collectionName, childNodes) => {
 
 export const top10UserNodes = catchTryAsyncErrors(async (event) => {
   const DB = await DBConn();
-  const headers = generateCorsHeaders("GET");
+  const headers = generateCorsHeaders();
   const userId = event.pathParameters.userId;
 
   const chains = await DB.collection("chains")

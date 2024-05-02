@@ -15,7 +15,7 @@ export const DBConn = async () => {
   }
 };
 
-export const generateCorsHeaders = (allowedMethods) => {
+export const generateCorsHeaders = () => {
   const allowedOrigins = [
     "http://localhost:5173",
     "https://main.d3gzu5jixwdx96.amplifyapp.com",
@@ -23,7 +23,7 @@ export const generateCorsHeaders = (allowedMethods) => {
 
   return {
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": allowedMethods,
+    "Access-Control-Allow-Methods": "GET",
     "Access-Control-Allow-Origin": allowedOrigins.join(", "),
   };
 };
@@ -44,7 +44,7 @@ export class HTTPResponse {
 }
 
 export const catchTryAsyncErrors = (action) => async (event) => {
-  const headers = generateCorsHeaders("GET");
+  const headers = generateCorsHeaders();
   try {
     const result = await action(event);
     return result;
