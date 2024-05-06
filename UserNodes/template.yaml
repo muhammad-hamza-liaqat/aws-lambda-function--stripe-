@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: "UserNodes"
+Description: "SpecficUserNodes"
 Globals:
   Function:
     Timeout: 120
@@ -21,7 +21,7 @@ Resources:
           MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10D
           DB_NAME: 10D
       Events:
-        GetUserNodes:
+        UserNodeEvent:
           Type: Api
           Properties:
             Path: /api/user/nodes/getlist/{userId}
@@ -40,7 +40,7 @@ Resources:
           MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10D
           DB_NAME: 10D
       Events:
-        UserTop10Nodes:
+        UserTop10NodeEvent:
           Type: Api
           Properties:
             Path: /api/user/nodes/top10UserNodes/{userId}
