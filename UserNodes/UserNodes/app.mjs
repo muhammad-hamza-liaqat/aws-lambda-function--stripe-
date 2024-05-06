@@ -1,76 +1,24 @@
 import StatusCodes from "http-status-codes";
 import {
   HTTPResponse,
-  DBConn,
+  calculateLevels,
   catchTryAsyncErrors,
+  generateCondition,
   generateCorsHeaders,
 } from "./helper.mjs";
 import { ObjectId } from "mongodb";
 
-const findNodeById = async (DB, nodeId, collectionName) => {
-  const nodeData = await DB.collection(collectionName)
-    .find({ _id: new ObjectId(nodeId) }, { projection: { children: 1 } })
-    .toArray();
-  return nodeData[0];
-};
-
-const calculateLevels = async (DB, nodeId, collectionName, childNodes) => {
-  const node = await findNodeById(DB, nodeId, collectionName);
-  if (!node) return { levelGrow: 0, levelComplete: 0 };
-
-  async function traverse(node, level) {
-    // console.log("node------------------->>>>>", node);
-    if (node.children.length === 0) return level;
-    let maxChildLevel = 0;
-    for (const childId of node.children) {
-      const childNode = await findNodeById(DB, childId, collectionName);
-      if (childNode) {
-        const childLevel = await traverse(childNode, level + 1);
-        maxChildLevel = Math.max(maxChildLevel, childLevel);
-      }
-    }
-    return maxChildLevel;
-  }
-  const levelGrow = await traverse(node, 0);
-
-  let highestCompleteLevel = -1;
-  let queue = [node];
-
-  while (queue.length > 0) {
-    const levelSize = queue.length;
-    const expectedNodes = Math.pow(childNodes, highestCompleteLevel + 1);
-
-    if (levelSize === expectedNodes) {
-      highestCompleteLevel++;
-    } else {
-      break;
-    }
-    for (let i = 0; i < levelSize; i++) {
-      const currentNode = queue.shift();
-      if (currentNode.children.length > 0) {
-        for (const childId of currentNode.children) {
-          const childNode = await findNodeById(DB, childId, collectionName);
-          if (childNode) {
-            queue.push(childNode);
-          }
-        }
-      }
-    }
-  }
-  return { levelGrow, highestCompleteLevel };
-};
-
-export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
-  const DB = await DBConn();
+export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
   const headers = generateCorsHeaders();
 
   const userId = event.pathParameters.userId;
 
   const page = Number(event.queryStringParameters?.page) || 1;
   const limit = Number(event.queryStringParameters?.limit) || 10;
+  let skip = (page - 1) * limit;
+
   const filter = event.queryStringParameters?.filter;
   const sort = event.queryStringParameters?.sort;
-  let skip = (page - 1) * limit;
 
   const chains = await DB.collection("chains")
     .find({}, { projection: { name: 1, childNodes: 1 } })
@@ -104,27 +52,12 @@ export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
     ];
   };
 
-  const generateCondition = (filter, userId, childNodes) => {
-    let condition = {};
-    if (filter === "fullypopulated") {
-      condition = { children: { $size: childNodes } };
-    } else if (filter === "underpopulated") {
-      condition = {
-        user: new ObjectId(userId),
-        $expr: {
-          $lt: [{ $size: "$children" }, childNodes],
-        },
-      };
-    }
-    return condition;
-  };
-
   const unionStages = chains.slice(1).map((chain) => ({
     $unionWith: {
       coll: "treeNodes" + chain.name,
       pipeline: pipelineData(
         "treeNodes" + chain.name,
-        generateCondition(filter, userId, chain.childNodes)
+        generateCondition(filter, chain.childNodes)
       ),
     },
   }));
@@ -132,7 +65,7 @@ export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
 
   const commonPipeline = pipelineData(
     "treeNodes" + chains[0].name,
-    generateCondition(filter, userId, chains[0].childNodes)
+    generateCondition(filter, chains[0].childNodes)
   );
   // console.log("commonPipeline", ...commonPipeline);
 
@@ -151,20 +84,20 @@ export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
     .toArray();
 
   const nodeWithLevel = await Promise.all(
-    nodes.map(async (obj) => {
+    nodes.map(async (node) => {
       const chain = chains.find(
-        (chain) => chain._id.toString() === obj.chain.toString()
+        (chain) => chain._id.toString() === node.chain.toString()
       );
       const { levelGrow, highestCompleteLevel } = await calculateLevels(
         DB,
-        obj._id,
-        obj.collectionName,
+        node._id,
+        node.collectionName,
         chain.childNodes
       );
-      obj.level = levelGrow;
-      obj.levelComplete = highestCompleteLevel;
-      delete obj.collectionName;
-      return obj;
+      node.level = levelGrow;
+      node.levelComplete = highestCompleteLevel;
+      delete node.collectionName;
+      return node;
     })
   );
 
@@ -202,14 +135,13 @@ export const getUserNodesAcrossChains = catchTryAsyncErrors(async (event) => {
 
     const filterQuery = {
       $and: [
-        generateCondition(filter, userId, chains[0].childNodes),
+        generateCondition(filter, chains[0].childNodes),
         { user: new ObjectId(userId) },
       ],
     };
     const collectionCount = await DB.collection(collectionName).countDocuments(
       filterQuery
     );
-    // console.log("hhh ++++> ", chain, collectionCount);
     count += collectionCount;
   }
   const response = new HTTPResponse(
