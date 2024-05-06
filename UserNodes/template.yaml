@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: "SpecficUserNodes"
+Description: "SpecificUserNodes"
 Globals:
   Function:
     Timeout: 120
@@ -24,7 +24,7 @@ Resources:
         UserNodeEvent:
           Type: Api
           Properties:
-            Path: /api/user/nodes/getlist/{userId}
+            Path: /api/user/nodes/getlist
             Method: get
     Metadata:
       SamResourceId: UserNodeFunction
@@ -43,7 +43,7 @@ Resources:
         UserTop10NodeEvent:
           Type: Api
           Properties:
-            Path: /api/user/nodes/top10UserNodes/{userId}
+            Path: /api/user/nodes/top10UserNodes
             Method: get
     Metadata:
       SamResourceId: UserTop10NodeFunction
