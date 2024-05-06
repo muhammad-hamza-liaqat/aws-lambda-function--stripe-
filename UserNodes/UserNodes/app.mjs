@@ -12,6 +12,7 @@ export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
   const headers = generateCorsHeaders();
 
   const userId = "663088475a62f16d73df53d3";
+  // const userId = event?.requestContext?.authorizer?.principalId;
 
   const page = Number(event.queryStringParameters?.page) || 1;
   const limit = Number(event.queryStringParameters?.limit) || 10;
