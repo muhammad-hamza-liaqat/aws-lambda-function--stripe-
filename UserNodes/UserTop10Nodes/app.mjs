@@ -9,8 +9,8 @@ import { ObjectId } from "mongodb";
 
 export const top10UserNodes = catchTryAsyncErrors(async (event, DB) => {
   const headers = generateCorsHeaders();
-  const userId = event.pathParameters.userId;
-
+  // const userId = event.pathParameters.userId;
+  const userId = "663088475a62f16d73df53d3";
   const chains = await DB.collection("chains")
     .find({}, { projection: { name: 1, childNodes: 1 } })
     .sort({ createdAt: -1 })

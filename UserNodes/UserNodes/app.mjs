@@ -11,7 +11,7 @@ import { ObjectId } from "mongodb";
 export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
   const headers = generateCorsHeaders();
 
-  const userId = event.pathParameters.userId;
+  const userId = "663088475a62f16d73df53d3";
 
   const page = Number(event.queryStringParameters?.page) || 1;
   const limit = Number(event.queryStringParameters?.limit) || 10;
