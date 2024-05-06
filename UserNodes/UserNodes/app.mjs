@@ -19,6 +19,7 @@ export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
 
   const filter = event.queryStringParameters?.filter;
   const sort = event.queryStringParameters?.sort;
+  const search = event.queryStringParameters?.search;
 
   const chains = await DB.collection("chains")
     .find({}, { projection: { name: 1, childNodes: 1 } })
@@ -57,7 +58,7 @@ export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
       coll: "treeNodes" + chain.name,
       pipeline: pipelineData(
         "treeNodes" + chain.name,
-        generateCondition(filter, chain.childNodes)
+        generateCondition(filter, chain.childNodes, search)
       ),
     },
   }));
@@ -65,7 +66,7 @@ export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
 
   const commonPipeline = pipelineData(
     "treeNodes" + chains[0].name,
-    generateCondition(filter, chains[0].childNodes)
+    generateCondition(filter, chains[0].childNodes, search)
   );
   // console.log("commonPipeline", ...commonPipeline);
 
@@ -135,7 +136,7 @@ export const getUserNodes = catchTryAsyncErrors(async (event, DB) => {
 
     const filterQuery = {
       $and: [
-        generateCondition(filter, chains[0].childNodes),
+        generateCondition(filter, chains[0].childNodes, search),
         { user: new ObjectId(userId) },
       ],
     };

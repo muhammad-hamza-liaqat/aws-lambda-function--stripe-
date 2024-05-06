@@ -58,7 +58,7 @@ export const catchTryAsyncErrors = (action) => async (event) => {
   }
 };
 
-export const generateCondition = (filter, childNodes) => {
+export const generateCondition = (filter, childNodes, search) => {
   let condition = {};
   if (filter === "fullypopulated") {
     condition = { children: { $size: childNodes } };
@@ -68,6 +68,9 @@ export const generateCondition = (filter, childNodes) => {
         $lt: [{ $size: "$children" }, childNodes],
       },
     };
+  }
+  if (search) {
+    condition = { _id:  { $eq: new ObjectId(search)} };
   }
   return condition;
 };
