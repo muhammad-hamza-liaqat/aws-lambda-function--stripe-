@@ -15,11 +15,19 @@ export const top10UserNodes = catchTryAsyncErrors(async (event, DB) => {
     .find({}, { projection: { name: 1, childNodes: 1 } })
     .sort({ createdAt: -1 })
     .toArray();
-  // console.log("chainNames", chains);
 
   const pipelineData = (collectionName) => {
     return [
       { $match: { user: new ObjectId(userId) } },
+      {
+        $graphLookup: {
+          from: collectionName,
+          startWith: "$children",
+          connectFromField: "children",
+          connectToField: "_id",
+          as: "allChildren",
+        },
+      },
       {
         $lookup: {
           from: "users",
@@ -35,21 +43,19 @@ export const top10UserNodes = catchTryAsyncErrors(async (event, DB) => {
           chain: 1,
           user: 1,
           totalEarning: 1,
+          totalMembers: { $size: "$allChildren" },
           username: "$userData.userName",
           collectionName: { $literal: collectionName },
         },
       },
     ];
   };
-
   const unionStages = chains.slice(1).map((chainName) => ({
     $unionWith: {
       coll: "treeNodes" + chainName.name,
       pipeline: pipelineData("treeNodes" + chainName.name),
     },
   }));
-  console.log("unionStages", ...unionStages);
-
   const commonPipeline = pipelineData("treeNodes" + chains[0].name);
   console.log("commonPipeline", ...commonPipeline);
 
