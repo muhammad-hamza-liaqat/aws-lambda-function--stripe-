@@ -1,0 +1,19 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Shopping Cart
+  body
+    h1 Shopping Cart
+    h3 chainID_660a428a002938f126abfc83
+    h3 chainName_2D
+    h3 NodeID_660a428a002938f126abfc84
+    p Price: $500.00
+    p Quantity: 1
+    //- br
+    //- h3 JavaScript T-Shirt
+    //- p Price: $20.00
+    //- p Quantity: 2
+    form(action="http://127.0.0.1:3000/api/payment/checkout-session", method="post")
+      input(type="submit", value="Proceed to Checkout")
