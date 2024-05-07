@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: "SpecificUserNodes"
+Description: "stripe implementation in aws lambda"
 Globals:
   Function:
     Timeout: 120
@@ -10,40 +10,23 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
-  UserNodeFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: UserNodes
-      Handler: app.getUserNodes
-      Runtime: nodejs20.x
-      Environment:
-        Variables:
-          MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10D
-          DB_NAME: 10D
-      Events:
-        UserNodeEvent:
-          Type: Api
-          Properties:
-            Path: /api/user/nodes/getlist
-            Method: get
-    Metadata:
-      SamResourceId: UserNodeFunction
-
   UserTop10NodeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: UserTop10Nodes
-      Handler: app.top10UserNodes
+      CodeUri: stripeFunction
+      Handler: app.stripeCheckSession
       Runtime: nodejs20.x
       Environment:
         Variables:
-          MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10D
+          MONGODB_URL: mongodb+srv://munirraza0047:3XLqYSVU6ygnbtlc@socketchat.enjbje9.mongodb.net/10DServerless
           DB_NAME: 10D
+          publishable_key: "pk_test_51P9KqvIjAnNUwiA8MUYrEcyjq9mheRP4Hk6cHqv2HiGrklCIPWIkJtFJ7kjuV6npMbbbnm4oYaY03b7eu81vohFq00YejX9g5B"
+          secret_key: "sk_test_51P9KqvIjAnNUwiA88oIusMbgnsGkmFLtPA1RoE9UuFgvo9PKGr5W6AVxBiYwS2me6xrNhP55JJyvZBjr3L1jM2TI00kKX5YCvP"
       Events:
         UserTop10NodeEvent:
           Type: Api
           Properties:
-            Path: /api/user/nodes/top10UserNodes
-            Method: get
+            Path: /api/payment/checkout
+            Method: post
     Metadata:
       SamResourceId: UserTop10NodeFunction
