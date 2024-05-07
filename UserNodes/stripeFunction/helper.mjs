@@ -33,14 +33,24 @@ export class HTTPResponse {
 
 export const catchTryAsyncErrors = (action) => async (event) => {
   const headers = generateCorsHeaders();
-  let client;
   try {
-    client = await DBConn();
-    const resp = await action(event, client.DB);
-    return resp;
+    const result = await action(event);
+    return result;
   } catch (error) {
-    console.log("error", error);
-    const err = new HTTPError(
+    console.log("catchAsyncError", error?.message || error);
+    if (error instanceof yup.ValidationError) {
+      const validationErrors = [];
+      error.inner.forEach((err) => {
+        validationErrors.push(err.message);
+      });
+      return {
+        statusCode: StatusCodes.BAD_REQUEST,
+        headers,
+        body: JSON.stringify({ error: validationErrors }),
+      };
+    }
+
+    let err = new HTTPError(
       "Something Went Wrong",
       StatusCodes.INTERNAL_SERVER_ERROR,
       error?.message || error
@@ -50,10 +60,5 @@ export const catchTryAsyncErrors = (action) => async (event) => {
       headers,
       body: JSON.stringify(err),
     };
-  } finally {
-    if (client && client.client) {
-      await client.client.close();
-      console.log("DB Connection Closed!");
-    }
   }
 };
