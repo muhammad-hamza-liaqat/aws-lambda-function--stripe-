@@ -1,10 +1,8 @@
 import fs from "fs";
 import pug from "pug";
-import { generateCorsHeaders } from "./helper.mjs";
 
 export const productPage = async () => {
   try {
-    const corsHeaders = generateCorsHeaders();
 
     const pugTemplate = await fs.promises.readFile("page.pug", "utf8");
 
@@ -13,7 +11,6 @@ export const productPage = async () => {
     return {
       statusCode: 200,
       headers: {
-        ...corsHeaders,
         "Content-Type": "text/html",
       },
       body: html,
@@ -24,7 +21,6 @@ export const productPage = async () => {
       statusCode: 500,
       headers: {
         "Content-Type": "application/json",
-        ...generateCorsHeaders(),
       },
       body: JSON.stringify({ error: error.message || error }),
     };

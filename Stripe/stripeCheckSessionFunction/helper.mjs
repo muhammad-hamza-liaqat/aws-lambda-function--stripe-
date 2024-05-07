@@ -1,6 +1,4 @@
 import StatusCodes from "http-status-codes";
-import DBConn from "./config.mjs";
-import { ObjectId } from "mongodb";
 
 export const generateCorsHeaders = () => {
   const allowedOrigins = [
@@ -11,7 +9,7 @@ export const generateCorsHeaders = () => {
   return {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "POST",
-    // "Access-Control-Allow-Origin": allowedOrigins.join(", "),
+    "Access-Control-Allow-Origin": allowedOrigins.join(", "),
     "Access-Control-Allow-Origin": "*",
   };
 };
@@ -24,6 +22,7 @@ export class HTTPError extends Error {
     this.details = details;
   }
 }
+
 export class HTTPResponse {
   constructor(message = "Success", data) {
     this.message = message;
@@ -34,22 +33,12 @@ export class HTTPResponse {
 export const catchTryAsyncErrors = (action) => async (event) => {
   const headers = generateCorsHeaders();
   try {
+    console.log("Executing action...");
     const result = await action(event);
+    console.log("Action executed successfully.");
     return result;
   } catch (error) {
-    console.log("catchAsyncError", error?.message || error);
-    if (error instanceof yup.ValidationError) {
-      const validationErrors = [];
-      error.inner.forEach((err) => {
-        validationErrors.push(err.message);
-      });
-      return {
-        statusCode: StatusCodes.BAD_REQUEST,
-        headers,
-        body: JSON.stringify({ error: validationErrors }),
-      };
-    }
-
+    console.error("Error caught:", error);
     let err = new HTTPError(
       "Something Went Wrong",
       StatusCodes.INTERNAL_SERVER_ERROR,
