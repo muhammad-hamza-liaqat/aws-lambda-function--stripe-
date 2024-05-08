@@ -52,21 +52,21 @@ Resources:
 
 
 
-  # completeCheckoutFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     CodeUri: completeCheckoutFunction
-  #     Handler: app.completePaymentHandler
-  #     Runtime: nodejs20.x
-  #     Environment:
-  #       Variables:
-  #         publishable_key: ""
-  #         secret_key: ""
-  #     Events:
-  #       completeCheckoutEvent:
-  #         Type: Api
-  #         Properties:
-  #           Path: /api/payment/complete
-  #           Method: get
-  #   Metadata:
-  #     SamResourceId: productPageFunction
+  completePaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: completePaymentFunction
+      Handler: app.completePayment
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          publishable_key: ""
+          secret_key: ""
+      Events:
+        completePaymentEvent:
+          Type: Api
+          Properties:
+            Path: /api/payment/complete
+            Method: get
+    Metadata:
+      SamResourceId: completePaymentFunction
