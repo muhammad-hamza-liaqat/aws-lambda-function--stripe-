@@ -89,8 +89,6 @@ Resources:
           Properties:
             Path: /api/payment/webhook
             Method: post
-            # RestApiId: !Ref MyApi
-            # RequestParameters:
-            #   method.request.header.stripe-signature: true
+
     Metadata:
       SamResourceId: webHookFunction
