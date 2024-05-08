@@ -1,4 +1,4 @@
-# Promotion
+# Stripe implementation
 
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
@@ -23,6 +23,11 @@ The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI
 * [DataGrip](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
 * [VS Code](https://docs.aws.amazon.com/toolkit-for-vscode/latest/userguide/welcome.html)
 * [Visual Studio](https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/welcome.html)
+
+## for https secure connection
+for https secure connection, use service like ngrok or localtunnel. the command for local tunnel is like
+
+*  localtunnel - [npx localtunnel --port 3000 --subdomain stripe-server] (https://www.npmjs.com/package/localtunnel)
 
 ## Deploy the sample application
 

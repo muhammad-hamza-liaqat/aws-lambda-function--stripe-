@@ -42,7 +42,7 @@ Resources:
           publishable_key: ""
           secret_key: ""
       Events:
-        stripeCheckSessionEvent:
+        productPageEvent:
           Type: Api
           Properties:
             Path: /api/payment/product
@@ -70,3 +70,27 @@ Resources:
             Method: get
     Metadata:
       SamResourceId: completePaymentFunction
+
+
+  webHookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: webHookFunction
+      Handler: app.webHook
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          publishable_key: ""
+          secret_key: ""
+          webhook_secret_endpoint_key: ""
+      Events:
+        webHookEvent:
+          Type: Api
+          Properties:
+            Path: /api/payment/webhook
+            Method: post
+            # RestApiId: !Ref MyApi
+            # RequestParameters:
+            #   method.request.header.stripe-signature: true
+    Metadata:
+      SamResourceId: webHookFunction

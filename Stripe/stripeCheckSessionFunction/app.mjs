@@ -1,4 +1,4 @@
-import stripePackage from 'stripe';
+import stripePackage from "stripe";
 
 const stripe = stripePackage(process.env.secret_key);
 
@@ -11,7 +11,7 @@ export const checkoutSessionHandler = async (event, context) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "2D", 
+              name: "2D",
             },
             unit_amount: 500 * 100,
           },
@@ -19,6 +19,10 @@ export const checkoutSessionHandler = async (event, context) => {
         },
       ],
       mode: "payment",
+      // if want to implement webhook(s), secure https method required..
+      // success_url: `https://stripe-server.loca.lt/api/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
+      // cancel_url: "https://stripe-server.loca.lt/api/payment/cancel",
+
       success_url: `http://127.0.0.1:3000/api/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: "http://127.0.0.1:3000/api/payment/cancel",
       metadata: {
@@ -46,4 +50,3 @@ export const checkoutSessionHandler = async (event, context) => {
     };
   }
 };
-
